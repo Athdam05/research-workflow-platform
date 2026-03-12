@@ -2,9 +2,13 @@
 import os
 import sys
 
-# Fix: abspath FIRST, then dirname — works correctly when __file__ is just "app.py"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
+
+# Load .env FIRST before any other imports so GEMINI_API_KEY is available
+from dotenv import load_dotenv
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+print(f"🔑  GEMINI_API_KEY loaded: {'✅ Yes' if os.getenv('GEMINI_API_KEY') else '❌ No — check your .env file'}")
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -38,7 +42,7 @@ def create_app():
 
     @app.route("/api/health", methods=["GET"])
     def health():
-        return jsonify({"status": "ok", "message": "RWIIP backend is running 🚀"}), 200
+        return jsonify({"status": "ok", "message": "RWIIP backend is running"}), 200
 
     @app.errorhandler(404)
     def not_found(e):
