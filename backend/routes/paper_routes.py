@@ -54,7 +54,8 @@ def create_paper():
         if file_path:
             ai_result = analyze_paper_from_file(title, file_path)
         else:
-            ai_result = analyze_paper(title, data.get("link", "") or title)
+            text_to_analyze = data.get("content", "") or data.get("link", "") or title
+            ai_result = analyze_paper(title, text_to_analyze)
     else:
         ai_result = {"summary": "", "keywords": "", "concepts": ""}
 

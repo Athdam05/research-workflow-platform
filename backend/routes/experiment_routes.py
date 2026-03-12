@@ -34,10 +34,23 @@ def create_experiment():
         hypothesis=data.get("hypothesis", ""),
         method=data.get("method", ""),
         result=data.get("result", ""),
+        status=data.get("status", "planned"),
+        notes=data.get("notes", ""),
         related_paper_id=data.get("related_paper_id"),
     )
     db.session.add(experiment)
     db.session.commit()
+
+    from models.relationship_model import Relationship
+
+    if experiment.related_paper_id:
+        rel = Relationship(
+            source_type="experiment", source_id=experiment.id,
+            target_type="paper",      target_id=experiment.related_paper_id,
+            label="tests_paper"
+        )
+        db.session.add(rel)
+        db.session.commit()
     return jsonify(experiment.to_dict()), 201
 
 
@@ -52,7 +65,7 @@ def update_experiment(experiment_id):
     experiment = db.get_or_404(Experiment, experiment_id)
     data       = request.get_json(silent=True) or {}
 
-    for field in ["title", "hypothesis", "method", "result", "related_paper_id"]:
+    for field in ["title", "hypothesis", "method", "result", "status", "notes", "related_paper_id"]:
         if field in data:
             setattr(experiment, field, data[field])
 

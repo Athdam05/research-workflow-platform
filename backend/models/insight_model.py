@@ -11,7 +11,10 @@ class Insight(db.Model):
     id                      = db.Column(db.Integer, primary_key=True)
     project_id              = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
 
+    title                   = db.Column(db.String(255), default="Untitled Insight")
     content                 = db.Column(db.Text, nullable=False)  # the insight text / note
+    type                    = db.Column(db.String(50),  default="finding")
+    priority                = db.Column(db.String(50),  default="medium")
 
     # Optional foreign keys — an insight can be linked to a paper, an experiment, both, or neither
     related_paper_id        = db.Column(db.Integer, db.ForeignKey("papers.id"),      nullable=True)
@@ -23,7 +26,10 @@ class Insight(db.Model):
         return {
             "id":                    self.id,
             "project_id":            self.project_id,
+            "title":                 self.title,
             "content":               self.content,
+            "type":                  self.type,
+            "priority":              self.priority,
             "related_paper_id":      self.related_paper_id,
             "related_experiment_id": self.related_experiment_id,
             "created_at":            self.created_at.isoformat(),

@@ -15,6 +15,8 @@ class Experiment(db.Model):
     hypothesis       = db.Column(db.Text, default="")
     method           = db.Column(db.Text, default="")   # methodology / procedure
     result           = db.Column(db.Text, default="")   # recorded outcome
+    status           = db.Column(db.String(50), default="planned")
+    notes            = db.Column(db.Text, default="")
 
     # Optional link to a paper that motivated this experiment
     related_paper_id = db.Column(db.Integer, db.ForeignKey("papers.id"), nullable=True)
@@ -29,6 +31,8 @@ class Experiment(db.Model):
             "hypothesis":       self.hypothesis,
             "method":           self.method,
             "result":           self.result,
+            "status":           self.status,
+            "notes":            self.notes,
             "related_paper_id": self.related_paper_id,
             "created_at":       self.created_at.isoformat(),
         }

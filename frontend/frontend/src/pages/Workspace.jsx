@@ -7,8 +7,8 @@ import {
   getInsights, createInsight,
   getGraph, createRelationship,
 } from '../services/useApi'
-
-
+import PaperUpload from '../components/PaperUpload'
+import GraphView from '../components/GraphView'
 
 // ─── Shared micro-components ────────────────────────────────────────────────
 
@@ -64,26 +64,18 @@ function PapersTab({ projectId }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold">Papers <span className="text-gray-400 font-normal text-sm">({papers.length})</span></h2>
-        <Btn onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancel' : '+ Add Paper'}</Btn>
+        <Btn onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancel' : '+ Upload with AI'}</Btn>
       </div>
       {showForm && (
-        <Card className="mb-6">
-          <form onSubmit={submit} className="space-y-3">
-            <Field label="Title *"><Input placeholder="Paper title" value={form.title} onChange={f('title')} required autoFocus /></Field>
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Authors"><Input placeholder="Last, First" value={form.authors} onChange={f('authors')} /></Field>
-              <Field label="Year"><Input type="number" placeholder="2024" value={form.year} onChange={f('year')} /></Field>
-              <Field label="Venue"><Input placeholder="NeurIPS, arXiv…" value={form.venue} onChange={f('venue')} /></Field>
-            </div>
-            <Field label="URL"><Input type="url" placeholder="https://…" value={form.url} onChange={f('url')} /></Field>
-            <Field label="Abstract"><Textarea placeholder="Abstract…" value={form.abstract} onChange={f('abstract')} /></Field>
-            <Field label="AI Summary"><Textarea rows={2} placeholder="Key takeaways…" value={form.ai_summary} onChange={f('ai_summary')} /></Field>
-            <div className="flex gap-2 justify-end">
-              <Btn variant="secondary" onClick={() => setShowForm(false)}>Cancel</Btn>
-              <Btn type="submit" disabled={saving}>{saving ? 'Saving…' : 'Add Paper'}</Btn>
-            </div>
-          </form>
-        </Card>
+        <div className="mb-6 relative">
+          <div className="absolute right-4 top-4 z-10">
+            <Btn variant="secondary" onClick={() => {
+              setShowForm(false);
+              getPapers(projectId).then(r => setPapers(r.data || []));
+            }}>Close & Refresh</Btn>
+          </div>
+          <PaperUpload projectId={projectId} />
+        </div>
       )}
       {papers.length === 0 ? <EmptyMsg text="No papers yet." /> : (
         <div className="space-y-3">
@@ -95,7 +87,8 @@ function PapersTab({ projectId }) {
               </div>
               <p className="text-gray-500 text-xs">{[p.authors, p.year, p.venue].filter(Boolean).join(' · ')}</p>
               {p.abstract   && <p className="text-gray-600 text-xs mt-2 leading-relaxed">{p.abstract}</p>}
-              {p.ai_summary && <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-2"><span className="text-xs font-semibold text-amber-700">AI Summary: </span><span className="text-xs text-amber-800">{p.ai_summary}</span></div>}
+              {p.summary && <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-2"><span className="text-xs font-semibold text-amber-700">AI Summary: </span><span className="text-xs text-amber-800">{p.summary}</span></div>}
+              {p.keywords && <div className="mt-2 flex flex-wrap gap-1 items-center"><span className="text-xs font-semibold text-gray-500">Keywords:</span>{(Array.isArray(p.keywords) ? p.keywords : String(p.keywords).split(',')).map((k, i) => <span key={i} className="text-[10px] bg-gray-100 border border-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{String(k).trim()}</span>)}</div>}
             </Card>
           ))}
         </div>
@@ -122,7 +115,16 @@ function ExperimentsTab({ projectId }) {
   const submit = async e => {
     e.preventDefault(); setSaving(true)
     try {
-      const r = await createExperiment({ ...form, project_id: parseInt(projectId) })
+      const payload = {
+        title: form.name.trim(),
+        hypothesis: form.hypothesis,
+        method: form.methodology,
+        result: form.results,
+        status: form.status,
+        notes: form.notes,
+        project_id: parseInt(projectId)
+      }
+      const r = await createExperiment(payload)
       setExperiments(p => [r.data, ...p])
       setForm({ name: '', status: 'planned', hypothesis: '', methodology: '', results: '', notes: '' })
       setShowForm(false)
@@ -160,7 +162,7 @@ function ExperimentsTab({ projectId }) {
             <Card key={exp.id} className="cursor-pointer">
               <div className="flex items-center justify-between" onClick={() => setExpanded(expanded === exp.id ? null : exp.id)}>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{exp.name || exp.title}</span>
+                  <span className="font-medium text-sm">{exp.title || exp.name}</span>
                   <Badge text={exp.status || 'planned'} color={STATUS_COLORS[exp.status] || 'gray'} />
                 </div>
                 <span className="text-gray-400 text-xs">{expanded === exp.id ? '▲' : '▼'}</span>
@@ -168,8 +170,8 @@ function ExperimentsTab({ projectId }) {
               {expanded === exp.id && (
                 <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
                   {exp.hypothesis  && <p className="text-xs"><span className="font-semibold text-purple-600">Hypothesis: </span>{exp.hypothesis}</p>}
-                  {exp.methodology && <p className="text-xs"><span className="font-semibold text-blue-600">Methodology: </span>{exp.methodology}</p>}
-                  {exp.results     && <p className="text-xs"><span className="font-semibold text-green-600">Results: </span>{exp.results}</p>}
+                  {(exp.method || exp.methodology) && <p className="text-xs"><span className="font-semibold text-blue-600">Methodology: </span>{exp.method || exp.methodology}</p>}
+                  {(exp.result || exp.results)     && <p className="text-xs"><span className="font-semibold text-green-600">Results: </span>{exp.result || exp.results}</p>}
                   {exp.notes       && <p className="text-xs"><span className="font-semibold text-gray-500">Notes: </span>{exp.notes}</p>}
                 </div>
               )}
@@ -204,7 +206,16 @@ function InsightsTab({ projectId }) {
   const submit = async e => {
     e.preventDefault(); setSaving(true)
     try {
-      const r = await createInsight({ ...form, project_id: parseInt(projectId), paper_id: form.paper_id ? parseInt(form.paper_id) : null, experiment_id: form.experiment_id ? parseInt(form.experiment_id) : null })
+      const payload = {
+        title: form.title,
+        content: form.content,
+        type: form.type,
+        priority: form.priority,
+        project_id: parseInt(projectId),
+        related_paper_id: form.paper_id ? parseInt(form.paper_id) : null,
+        related_experiment_id: form.experiment_id ? parseInt(form.experiment_id) : null
+      }
+      const r = await createInsight(payload)
       setInsights(p => [r.data, ...p])
       setForm({ title: '', content: '', type: 'finding', priority: 'medium', paper_id: '', experiment_id: '' })
       setShowForm(false)
@@ -241,8 +252,8 @@ function InsightsTab({ projectId }) {
       {insights.length === 0 ? <EmptyMsg text="No insights yet." /> : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {insights.map(ins => {
-            const paper = papers.find(p => p.id === ins.paper_id)
-            const exp   = experiments.find(e => e.id === ins.experiment_id)
+            const paper = papers.find(p => p.id === ins.related_paper_id || p.id === ins.paper_id)
+            const exp   = experiments.find(e => e.id === ins.related_experiment_id || e.id === ins.experiment_id)
             return (
               <Card key={ins.id}>
                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -342,8 +353,8 @@ function GraphTab({ projectId }) {
       )}
       {graph.edges?.length > 0 ? (
         <div>
-          <h3 className="text-sm font-semibold text-gray-600 mb-2">Relationships</h3>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2">Relationships List</h3>
+          <div className="border border-gray-200 rounded-lg overflow-hidden mb-8">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -353,19 +364,30 @@ function GraphTab({ projectId }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {graph.edges.map((edge, i) => (
+                {graph.edges.map((edge, i) => {
+                  const sLabel = graph.nodes?.find(n => n.id === `${edge.source_type}_${edge.source_id}`)?.label || `${edge.source_type} #${edge.source_id}`
+                  const tLabel = graph.nodes?.find(n => n.id === `${edge.target_type}_${edge.target_id}`)?.label || `${edge.target_type} #${edge.target_id}`
+                  return (
                   <tr key={i} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 text-xs text-gray-700">{edge.source_label || edge.source}</td>
-                    <td className="px-4 py-2"><span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">{edge.type || edge.relationship_type || '—'}</span></td>
-                    <td className="px-4 py-2 text-xs text-gray-700">{edge.target_label || edge.target}</td>
+                    <td className="px-4 py-2 text-xs text-gray-700">{sLabel}</td>
+                    <td className="px-4 py-2"><span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">{edge.label || edge.type || edge.relationship_type || '—'}</span></td>
+                    <td className="px-4 py-2 text-xs text-gray-700">{tLabel}</td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
+          <h3 className="text-sm font-semibold text-gray-600 mb-2">Interactive AI Graph</h3>
+          <div className="mt-4">
+            <GraphView projectId={projectId} />
+          </div>
         </div>
       ) : (
-        <EmptyMsg text="No relationships yet. Add one above to connect papers, experiments, and insights." />
+        <div>
+          <EmptyMsg text="No relationships yet. Add one above to connect papers, experiments, and insights." />
+          <h3 className="text-sm font-semibold text-gray-600 mb-2 mt-8">Interactive AI Graph</h3>
+          <GraphView projectId={projectId} />
+        </div>
       )}
     </div>
   )
@@ -384,7 +406,7 @@ export default function Workspace() {
     useEffect(() => {
   getProjects().then(r => {
     const found = (r.data || []).find(p => String(p.id) === String(id))
-    setProject(found || { id, name: `Project #${id}` })
+    setProject(found || { id, title: `Project #${id}` })
   })
 }, [id])
 
@@ -393,7 +415,7 @@ export default function Workspace() {
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/')} className="text-sm text-gray-500 hover:text-gray-800">← Back</button>
         <span className="text-gray-300">|</span>
-        <h1 className="text-xl font-bold">{project?.name || `Project #${id}`}</h1>
+        <h1 className="text-xl font-bold">{project?.title || project?.name || `Project #${id}`}</h1>
         {project?.description && <span className="text-sm text-gray-500">{project.description}</span>}
       </div>
       <div className="flex border-b border-gray-200 mb-6">

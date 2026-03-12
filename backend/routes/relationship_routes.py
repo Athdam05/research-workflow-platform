@@ -89,4 +89,6 @@ def project_graph():
       + [{"id": f"experiment_{e.id}", "type": "experiment", "label": e.title}        for e in experiments]
       + [{"id": f"insight_{i.id}",    "type": "insight",    "label": i.content[:60]} for i in insights]
     )
+    print("Graph Nodes:", nodes)
+    print("Graph Edges:", edges)
     return jsonify({"nodes": nodes, "edges": edges}), 200

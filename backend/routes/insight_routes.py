@@ -30,12 +30,36 @@ def create_insight():
 
     insight = Insight(
         project_id=int(project_id),
+        title=data.get("title", "Untitled Insight").strip(),
         content=content,
+        type=data.get("type", "finding"),
+        priority=data.get("priority", "medium"),
         related_paper_id=data.get("related_paper_id"),
         related_experiment_id=data.get("related_experiment_id"),
     )
     db.session.add(insight)
-    db.session.commit()
+    db.session.commit() # Commit to get insight.id
+
+    from models.relationship_model import Relationship
+
+    if insight.related_paper_id:
+        rel1 = Relationship(
+            source_type="insight", source_id=insight.id,
+            target_type="paper",   target_id=insight.related_paper_id,
+            label="based_on_paper"
+        )
+        db.session.add(rel1)
+    
+    if insight.related_experiment_id:
+        rel2 = Relationship(
+            source_type="insight", source_id=insight.id,
+            target_type="experiment", target_id=insight.related_experiment_id,
+            label="based_on_experiment"
+        )
+        db.session.add(rel2)
+
+    if insight.related_paper_id or insight.related_experiment_id:
+        db.session.commit()
     return jsonify(insight.to_dict()), 201
 
 
@@ -50,7 +74,7 @@ def update_insight(insight_id):
     insight = db.get_or_404(Insight, insight_id)
     data    = request.get_json(silent=True) or {}
 
-    for field in ["content", "related_paper_id", "related_experiment_id"]:
+    for field in ["title", "content", "type", "priority", "related_paper_id", "related_experiment_id"]:
         if field in data:
             setattr(insight, field, data[field])
 

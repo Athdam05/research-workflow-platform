@@ -23,7 +23,7 @@ export default function Dashboard() {
     if (!name.trim()) return
     setCreating(true)
     try {
-      const r = await createProject({ name: name.trim(), description })
+      const r = await createProject({ title: name.trim(), description })
       setProjects(p => [r.data, ...p])
       setName('')
       setDescription('')
@@ -84,7 +84,7 @@ export default function Dashboard() {
             className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all group"
           >
             <div className="flex items-start justify-between">
-              <h3 className="font-semibold text-gray-900 text-sm mb-1">{p.name}</h3>
+              <h3 className="font-semibold text-gray-900 text-sm mb-1">{p.title || p.name}</h3>
               <button
                 onClick={e => handleDelete(e, p.id)}
                 className="text-gray-300 hover:text-red-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-2"
